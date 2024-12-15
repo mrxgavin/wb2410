@@ -267,22 +267,13 @@ def main():
         
     selected_image = st.sidebar.selectbox("Select Test Image", test_images)
     
-    # Advanced settings toggle
-    show_advanced = st.sidebar.checkbox("Show Advanced Settings")
-    
-    if show_advanced:
-        st.sidebar.subheader("Advanced Settings")
-        # Add algorithm parameter adjustments here
-        min_distance = st.sidebar.slider("Minimum Distance Between Contours", 1, 10, 2)
-        min_area = st.sidebar.slider("Minimum Contour Area", 10, 100, 50)
-        clip_limit = st.sidebar.slider("CLAHE Clip Limit", 1.0, 4.0, 2.0)
-        tile_grid_size = st.sidebar.slider("CLAHE Tile Grid Size", 1, 16, 8)
-    else:
-        # Default values if advanced settings are not shown
-        min_distance = 2
-        min_area = 50
-        clip_limit = 2.0
-        tile_grid_size = 8
+    # Advanced settings expander
+    advanced_settings = st.sidebar.expander("Advanced Settings", expanded=False)
+    with advanced_settings:
+        min_distance = st.slider("Minimum Distance Between Contours", 1, 10, 2)
+        min_area = st.slider("Minimum Contour Area", 10, 100, 50)
+        clip_limit = st.slider("CLAHE Clip Limit", 1.0, 4.0, 2.0)
+        tile_grid_size = st.slider("CLAHE Tile Grid Size", 1, 16, 8)
     
     # Construct proper path with os.path.join
     image_path = os.path.join(script_dir, "pics", selected_image)
