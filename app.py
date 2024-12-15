@@ -100,7 +100,7 @@ def standardize_image(image):
     
     return enhanced
 
-def process_image(image):
+def process_image(image, clip_limit=2.0, tile_grid_size=8):
     """Main function for processing the image"""
     # First, standardize the image
     standardized = standardize_image(image)
@@ -109,7 +109,7 @@ def process_image(image):
     gray = cv2.cvtColor(standardized, cv2.COLOR_BGR2GRAY)
     
     # Further image enhancement
-    clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8,8))
+    clahe = cv2.createCLAHE(clipLimit=clip_limit, tileGridSize=(tile_grid_size, tile_grid_size))
     enhanced = clahe.apply(gray)
     
     # Denoise the image
@@ -120,7 +120,7 @@ def process_image(image):
     
     return inverted, standardized
 
-def detect_bands(image):
+def detect_bands(image, min_distance=2, min_area=50):
     """Improved band detection function"""
     # Preprocess to reduce shadow effects
     blur = cv2.GaussianBlur(image, (5,5), 0)
@@ -138,11 +138,11 @@ def detect_bands(image):
     closed = cv2.morphologyEx(opened, cv2.MORPH_CLOSE, kernel_v)
     
     # Find contours
-    contours, _ = cv2.findContours(closed, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    contours, _ = cv2.findContours(closed, cv2.RETR_LIST, cv2.CHAIN_APPROX_TC89_KCOS)
+
     
     # Merge contours that are too close
     merged_contours = []
-    min_distance = 2  # Minimum distance threshold
     
     # Sort contours by x-coordinate
     sorted_contours = sorted(contours, key=lambda c: cv2.boundingRect(c)[0])
@@ -153,7 +153,7 @@ def detect_bands(image):
         area = cv2.contourArea(contour)
         
         # Filter out contours that are too small (likely noise)
-        if area < 50:  # Minimum area threshold
+        if area < min_area:  # Minimum area threshold
             continue
             
         # Filter out contours with abnormal aspect ratios (likely shadows)
@@ -252,7 +252,6 @@ def analyze_band_intensity(image, contours):
     
     return results
 
-# Update image path in main():
 def main():
     st.title("Western Blot Band Analyzer")
     
@@ -268,6 +267,23 @@ def main():
         
     selected_image = st.sidebar.selectbox("Select Test Image", test_images)
     
+    # Advanced settings toggle
+    show_advanced = st.sidebar.checkbox("Show Advanced Settings")
+    
+    if show_advanced:
+        st.sidebar.subheader("Advanced Settings")
+        # Add algorithm parameter adjustments here
+        min_distance = st.sidebar.slider("Minimum Distance Between Contours", 1, 10, 2)
+        min_area = st.sidebar.slider("Minimum Contour Area", 10, 100, 50)
+        clip_limit = st.sidebar.slider("CLAHE Clip Limit", 1.0, 4.0, 2.0)
+        tile_grid_size = st.sidebar.slider("CLAHE Tile Grid Size", 1, 16, 8)
+    else:
+        # Default values if advanced settings are not shown
+        min_distance = 2
+        min_area = 50
+        clip_limit = 2.0
+        tile_grid_size = 8
+    
     # Construct proper path with os.path.join
     image_path = os.path.join(script_dir, "pics", selected_image)
     image = safe_read_image(image_path)
@@ -281,8 +297,8 @@ def main():
         st.sidebar.text(f"Original Size: {image.shape[1]}x{image.shape[0]}")
         
         # Process the image
-        processed, standardized = process_image(image)
-        bands = detect_bands(processed)
+        processed, standardized = process_image(image, clip_limit, tile_grid_size)
+        bands = detect_bands(processed, min_distance, min_area)
         
         col1, col2 = st.columns(2)
         
