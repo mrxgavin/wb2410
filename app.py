@@ -2,11 +2,9 @@ import streamlit as st
 import cv2
 import tempfile
 import os
-
 from PIL import Image
 import pandas as pd
 import plotly.graph_objects as go
-
 from Algorithms.BandDetection import detect_bands
 from Algorithms.Analyze_band_intensity import analyze_band_intensity
 from ImageProcessing.Processor import *
@@ -70,24 +68,34 @@ def main():
     # Advanced settings expander
     advanced_settings = st.sidebar.expander("Advanced Settings", expanded=False)
     with advanced_settings:
-        min_distance = st.slider("Minimum Distance Between Contours", 1, 10, 2)
-        min_area = st.slider("Minimum Contour Area", 10, 100, 50)
-        clip_limit = st.slider("CLAHE Clip Limit", 1.0, 4.0, 2.0)
-        tile_grid_size = st.slider("CLAHE Tile Grid Size", 1, 16, 8)
+        min_distance = st.slider(
+            "Minimum Distance Between Contours",
+            0, 20, 2,
+            help="Larger values reduce the number of detected bands by requiring them to be further apart. Smaller values increase the number of detected bands by allowing them to be closer together."
+        )
+        min_area = st.slider(
+            "Minimum Contour Area",
+            0, 100, 50,
+            help="Larger values reduce the number of detected bands by considering only larger contours. Smaller values increase the number of detected bands by considering smaller contours as well."
+        )
+        clip_limit = st.slider(
+            "CLAHE Clip Limit",
+            1.0, 4.0, 2.0,
+            help="Higher values increase the contrast of the image, making bands more prominent. Lower values decrease the contrast, making the image smoother."
+        )
+        tile_grid_size = st.slider(
+            "CLAHE Tile Grid Size",
+            1, 16, 8,
+            help="Larger values process larger areas of the image, making the contrast equalization effect more pronounced. Smaller values process smaller areas, making the effect more detailed."
+        )
 
     if image is None:
         return
     
-    # Add original image information display
-    st.sidebar.subheader("Image Information")
-    st.sidebar.text(f"Original Size: {image.shape[1]}x{image.shape[0]}")
-
-
-
     # Process the image
     processed, standardized = process_image(image, clip_limit, tile_grid_size)
     bands = detect_bands(processed, min_distance, min_area)
-
+    
     col1, col2 = st.columns(2)
 
     with col1:
@@ -135,46 +143,32 @@ def main():
         # Round all numerical columns to two decimal places
         df = df.round(2)
         
-        st.dataframe(df[display_cols])
+        col1, col2 = st.columns([3, 7])
         
-        # Add integrated density distribution plot
-        st.subheader("Integrated Density Distribution")
-        fig = go.Figure()
+        with col1:
+            st.dataframe(df[display_cols])
         
-        # Add integrated density bar chart
-        fig.add_trace(go.Bar(
-            x=df['band_number'],
-            y=df['relative_density'],
-            name='Relative Integrated Density',
-            marker_color='rgb(55, 83, 109)'
-        ))
-        
-        fig.update_layout(
-            xaxis_title="Band Number",
-            yaxis_title="Relative Integrated Density (%)",
-            showlegend=True,
-            barmode='group'
-        )
-        
-        st.plotly_chart(fig, use_container_width=True)
+        with col2:
+            # st.subheader("Integrated Density Distribution")
+            fig = go.Figure()
+            
+            # Add integrated density bar chart
+            fig.add_trace(go.Bar(
+                x=df['band_number'],
+                y=df['relative_density'],
+                name='Relative Integrated Density',
+                marker_color='rgb(55, 83, 109)'
+            ))
+            
+            fig.update_layout(
+                xaxis_title="Band Number",
+                yaxis_title="Relative Integrated Density (%)",
+                showlegend=False,  # Hide the legend
+                barmode='group'
+            )
+            
+            st.plotly_chart(fig, use_container_width=True)
 
 if __name__ == "__main__":
     main()
     
-    
-# # Add a title to your app
-# st.title("Image Uploader")
-
-# # File uploader
-# uploaded_file = st.file_uploader(
-#     "Choose an image", type=["png", "jpg", "jpeg"])
-
-# if uploaded_file is not None:
-#     # Open the uploaded image
-#     image = Image.open(uploaded_file)
-
-#     # Display the image
-#     st.image(image, caption="Uploaded Image", use_column_width=True)
-#     st.write("Image uploaded successfully!")
-# else:
-#     st.write("No image uploaded yet. Please upload an image.")

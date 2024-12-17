@@ -21,7 +21,7 @@ def load_test_images():
     
     # List image files with proper error handling
     try:
-        image_files = [f.name for f in image_dir.iterdir() if f.suffix.lower() in {'.png', '.jpg', '.jpeg'}]
+        image_files = [f.name for f in image_dir.iterdir() if f.suffix.lower() in {'.png', '.jpg', '.jpeg', '.tif', '.tiff'}]
         return image_files
     except Exception as e:
         st.error(f"Error loading images: {str(e)}")
