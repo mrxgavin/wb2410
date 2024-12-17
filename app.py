@@ -5,10 +5,10 @@ import os
 from PIL import Image
 import pandas as pd
 import plotly.graph_objects as go
-from Algorithms.BandDetection import detect_bands
+from Algorithms.BandDetection import *
 from Algorithms.Analyze_band_intensity import analyze_band_intensity
 from ImageProcessing.Processor import *
-
+from scipy.ndimage import gaussian_filter1d
 
 
 # Page config
@@ -96,6 +96,21 @@ def main():
     processed, standardized = process_image(image, clip_limit, tile_grid_size)
     bands = detect_bands(processed, min_distance, min_area)
     
+    # Analyze band intensity to get relative density
+    analysis_results = analyze_band_intensity(processed, bands)
+    df = pd.DataFrame(analysis_results)
+    max_density = df['integrated_density'].max()
+    df['relative_density'] = (df['integrated_density'] / max_density * 100)
+
+    # Check for bands with relative density > 20 and split them
+    new_bands = []
+    for i, cnt in enumerate(bands):
+        if df.loc[i, 'relative_density'] > 20:
+            new_bands.extend(split_merged_bands(processed, cnt))
+        else:
+            new_bands.append(cnt)
+    bands = new_bands
+
     col1, col2 = st.columns(2)
 
     with col1:
@@ -149,7 +164,7 @@ def main():
             st.dataframe(df[display_cols])
         
         with col2:
-            # st.subheader("Integrated Density Distribution")
+            st.subheader("Integrated Density Distribution")
             fig = go.Figure()
             
             # Add integrated density bar chart
